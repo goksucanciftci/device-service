@@ -16,5 +16,6 @@ public class DeviceDTO {
 	private String name;
 	private String brand;
 	private LocalDateTime creationTime;
+	private int version;
 
 }

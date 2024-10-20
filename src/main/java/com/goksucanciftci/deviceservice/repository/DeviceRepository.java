@@ -10,5 +10,5 @@ import java.util.List;
 @Repository
 public interface DeviceRepository extends JpaRepository<Device, String> {
 
-	List<DeviceDTO> findByBrandContainingIgnoreCase (String brand);
+	List<Device> findByBrandContainingIgnoreCase (String brand);
 }

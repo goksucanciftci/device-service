@@ -7,6 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -32,6 +33,10 @@ public class Device {
 	private String brand;
 
 	private LocalDateTime creationTime;
+
+	@Version
+	@Column(name = "version")
+	private int version;
 
 	@PrePersist
 	protected void onCreate() {

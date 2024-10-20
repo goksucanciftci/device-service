@@ -5,24 +5,27 @@ import com.goksucanciftci.deviceservice.model.entity.Device;
 import com.goksucanciftci.deviceservice.model.mapper.DeviceMapper;
 import com.goksucanciftci.deviceservice.repository.DeviceRepository;
 import com.goksucanciftci.deviceservice.service.DeviceService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.Optional;
+
 @Service
+@RequiredArgsConstructor
 public class DeviceServiceImpl implements DeviceService {
 
-	@Autowired
-	DeviceMapper deviceMapper;
-	@Autowired
-	DeviceRepository deviceRepository;
+
+	final DeviceMapper deviceMapper;
+
+	final DeviceRepository deviceRepository;
 
 	@Override
 	@Transactional
+	@CacheEvict(value = "devices", allEntries = true)
 	public DeviceDTO save(DeviceDTO deviceDTO) {
 		Device device = deviceMapper.asEntity(deviceDTO);
 		device = deviceRepository.save(device);
@@ -31,13 +34,9 @@ public class DeviceServiceImpl implements DeviceService {
 
 	@Override
 	@Cacheable(value = "devices", key = "#id")
-	public DeviceDTO findById(Long id) {
-		try{
-			Device device = deviceRepository.findById(String.valueOf(id)).orElseThrow();;
-			return deviceMapper.asDTO(device);
-		} catch (NoSuchElementException e) {
-			throw new RuntimeException("Device not found with id: " + id);
-		}
+	public Optional<DeviceDTO> findById(Long id) {
+		return deviceRepository.findById(String.valueOf(id))
+				.map(deviceMapper::asDTO);
 	}
 
 	@Override
@@ -50,28 +49,27 @@ public class DeviceServiceImpl implements DeviceService {
 	@Override
 	@Transactional
 	@CacheEvict(value = "devices", allEntries = true)
-	public DeviceDTO update(Long id, DeviceDTO deviceDTO) {
-		try{
-			Device device = deviceRepository.findById(String.valueOf(id)).orElseThrow();
-			device.setName(deviceDTO.getName());
-			device.setBrand(deviceDTO.getBrand());
-			device = deviceRepository.save(device);
-			return deviceMapper.asDTO(device);
-
-		} catch (Exception e) {
-			throw new RuntimeException("Failed to update device: " + e.getMessage(), e);
-		}
+	public Optional<DeviceDTO> update(Long id, DeviceDTO deviceDTO) {
+		return deviceRepository.findById(String.valueOf(id))
+				.map(device -> {
+					device.setName(deviceDTO.getName());
+					device.setBrand(deviceDTO.getBrand());
+					Device updatedDevice = deviceRepository.save(device);
+					return deviceMapper.asDTO(updatedDevice);
+				});
 	}
 
 	@Override
 	@CacheEvict(value = "devices", allEntries = true)
 	public void deleteById(Long id) {
-		deviceRepository.deleteById(String.valueOf(id));
+		deviceRepository.findById(String.valueOf(id))
+				.ifPresent(deviceRepository::delete);
 	}
 
 	@Override
-	@Cacheable (value = "devices", key = "#brand")
+	@Cacheable(value = "devices", key = "#brand")
 	public List<DeviceDTO> findByBrand(String brand) {
-		return deviceRepository.findByBrandContainingIgnoreCase(brand);
+		List<Device> devices = deviceRepository.findByBrandContainingIgnoreCase(brand);
+		return deviceMapper.asDTOList(devices);
 	}
 }
